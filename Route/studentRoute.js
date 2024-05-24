@@ -10,26 +10,36 @@ const pool = new Pool({
     password: process.env.PASSWORD,
     port: process.env.PORT
   })
-router.post("/signup",async (request,response)=>{
-    
-    const { std_name, std_email, std_pass } = request.body;
-    if (!std_name || !std_email || !std_pass ) {
-        return response.status(400).send("All fields are required");
-        
+
+
+router.post("/signup", async (request, response) => {
+  const { std_name, std_email, std_pass, cust_name } = request.body;
+
+  if (!std_name || !std_email || !std_pass || !cust_name) {
+      return response.status(400).send("All fields are required");
+  }
+
+
+  try {
+      
+      const customerResult = await pool.query('SELECT Cust_id FROM Customer WHERE Cust_name= $1', [cust_name]);
+      
+      if (customerResult.rows.length === 0) {
+          return response.status(400).send("Invalid customer name");
       }
 
-   const hashedPassword = await bcrypt.hash(std_pass, 10);
+      const cust_id = customerResult.rows[0].cust_id;
+      const hashedPassword = await bcrypt.hash(std_pass, 10);
 
-   
-
-  pool.query('INSERT INTO student (std_name,std_pass,std_email) VALUES ($1, $2,$3)', [std_name,hashedPassword,std_email], (error, results) => {
-    if (error) {
-      throw error
-    }
-    response.status(201).send(`Student added `)
-  
-  })
-})
+      
+      await pool.query('INSERT INTO student (std_name, std_email, std_pass, cust_id) VALUES ($1, $2, $3, $4)', 
+                       [std_name, std_email, hashedPassword, cust_id]);
+      
+      response.status(201).send("Student added successfully");
+  } catch (error) {
+      response.status(500).send("Database error");
+  }
+});
 
 router.post("/login",async (request,response)=>{
     const { std_email, std_pass } = request.body;

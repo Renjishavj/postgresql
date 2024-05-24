@@ -39,6 +39,7 @@ router.get("/:emp_id",(request,response)=>{
     pool.query('SELECT * FROM employee WHERE emp_id = $1', [emp_id], (error, results) => {
       if (error) {
         throw error 
+      
       }
       response.status(200).json(results.rows)
     })
